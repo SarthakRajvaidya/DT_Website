@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MITAOE Student Records</title>
+
+  <!-- DataTables & Libraries -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" />
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.19.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Styles with Dark Mode and Transitions -->
+  <style>
+    :root {
+      --bg-color: #f0f6ff;
+      --text-color: #000;
+      --card-bg: #fff;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #121212;
+      --text-color: #eee;
+      --card-bg: #1e1e1e;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      transition: background 0.5s ease, color 0.5s ease;
+    }
+
+    header, footer {
+      background: #003366;
+      color: white;
+      text-align: center;
+      padding: 1em;
+    }
+
+    nav a {
+      margin: 0 15px;
+      color: #ffcc00;
+      text-decoration: none;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 30px;
+      background: #cce6ff;
+      transition: background 0.3s ease;
+    }
+
+    .controls {
+      margin: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .controls input, .controls select, .controls button {
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .toggle-theme {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: #222;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #chartContainer {
+      margin: 40px auto;
+      max-width: 600px;
+    }
+
+    table {
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    section, table, canvas {
+      opacity: 0;
+      animation: fadeIn 1s ease-in-out forwards;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <button class="toggle-theme" onclick="toggleTheme()">Toggle Theme</button>
+
+  <header>
+    <h1>MITAOE - Past Year Students Records</h1>
+    <nav>
+      <a href="#students">Students</a>
+      <a href="#about">About</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h2>Welcome to MITAOE Records Portal</h2>
+    <p>View, search, sort, filter, and download the records of our talented alumni.</p>
+  </section>
+
+  <section id="students">
+    <h2 style="text-align:center;">Student Records</h2>
+    <div class="controls">
+      <input type="text" id="searchInput" placeholder="Search by Name or Branch" />
+      <select id="branchFilter">
+        <option value="">All Branches</option>
+        <option value="Computer">Computer</option>
+        <option value="IT">IT</option>
+        <option value="Mechanical">Mechanical</option>
+        <option value="Civil">Civil</option>
+        <option value="ENTC">ENTC</option>
+        <option value="Electrical">Electrical</option>
+      </select>
+      <button onclick="downloadExcel()">Download Excel</button>
+      <button onclick="downloadPDF()">Download PDF</button>
+    </div>
+
+    <table id="studentsTable" class="display" style="width:100%">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Branch</th>
+          <th>Passing Year</th>
+          <th>Marks (%)</th>
+          <th>CGPA</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </section>
+
+  <div id="chartContainer">
+    <canvas id="cgpaChart"></canvas>
+  </div>
+
+  <section id="about">
+    <h2>About MITAOE</h2>
+    <p style="text-align:center; max-width: 600px; margin: auto;">
+      MIT Academy of Engineering (MITAOE) is a premier engineering institute shaping future engineers and leaders with innovative education and industry-oriented programs.
+    </p>
+  </section>
+
+  <footer>
+    <p>© 2025 MITAOE. All Rights Reserved.</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    const students = [];
+    const branches = ["Computer", "IT", "Mechanical", "Civil", "ENTC", "Electrical"];
+    const names = ["Aarav", "Vivaan", "Anaya", "Ishaan", "Diya", "Saanvi", "Krishna", "Riya", "Aditya", "Myra"];
+
+    for (let i = 1; i <= 600; i++) {
+      const name = `${names[Math.floor(Math.random() * names.length)]} ${names[Math.floor(Math.random() * names.length)]}`;
+      const branch = branches[Math.floor(Math.random() * branches.length)];
+      const year = Math.floor(Math.random() * (2023 - 2015 + 1)) + 2015;
+      const marks = (Math.random() * 100).toFixed(2);
+      const cgpa = (Math.random() * (10 - 6) + 6).toFixed(2);
+      students.push({ id: i, name, branch, year, marks, cgpa });
+    }
+
+    $(document).ready(function () {
+      const table = $('#studentsTable').DataTable({
+        data: students,
+        columns: [
+          { data: 'id' },
+          { data: 'name' },
+          { data: 'branch' },
+          { data: 'year' },
+          { data: 'marks' },
+          { data: 'cgpa' }
+        ]
+      });
+
+      $('#searchInput').on('keyup', function () {
+        table.search(this.value).draw();
+      });
+
+      $('#branchFilter').on('change', function () {
+        table.column(2).search(this.value).draw();
+      });
+
+      window.downloadExcel = function () {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(students);
+        XLSX.utils.book_append_sheet(wb, ws, 'Students');
+        XLSX.writeFile(wb, 'students_records.xlsx');
+      };
+
+      window.downloadPDF = function () {
+        const { jsPDF } = window.jspdf;
+        html2canvas(document.querySelector("#studentsTable")).then((canvas) => {
+          const pdf = new jsPDF();
+          const imgData = canvas.toDataURL("image/png");
+          const imgProps = pdf.getImageProperties(imgData);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save("students_records.pdf");
+        });
+      };
+
+      // CGPA Chart
+      const buckets = {
+        '6.0–6.9': 0,
+        '7.0–7.9': 0,
+        '8.0–8.9': 0,
+        '9.0–10.0': 0
+      };
+
+      students.forEach(s => {
+        const cg = parseFloat(s.cgpa);
+        if (cg < 7) buckets['6.0–6.9']++;
+        else if (cg < 8) buckets['7.0–7.9']++;
+        else if (cg < 9) buckets['8.0–8.9']++;
+        else buckets['9.0–10.0']++;
+      });
+
+      new Chart(document.getElementById("cgpaChart"), {
+        type: "pie",
+        data: {
+          labels: Object.keys(buckets),
+          datasets: [{
+            data: Object.values(buckets),
+            backgroundColor: ["#f39c12", "#3498db", "#2ecc71", "#9b59b6"]
+          }]
+        },
+        options: {
+          plugins: {
+            title: {
+              display: true,
+              text: 'CGPA Distribution'
+            }
+          }
+        }
+      });
+    });
+
+    // 🌙 Toggle Theme
+    function toggleTheme() {
+      const html = document.documentElement;
+      if (html.getAttribute("data-theme") === "dark") {
+        html.removeAttribute("data-theme");
+      } else {
+        html.setAttribute("data-theme", "dark");
+      }
+    }
+  </script>
+</body>
+</html>
